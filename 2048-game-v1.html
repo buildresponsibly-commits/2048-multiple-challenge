@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2048 Game - Challenge Mode</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Clear Sans', 'Helvetica Neue', Arial, sans-serif;
+            background: #faf8ef;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 500px;
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 80px;
+            font-weight: bold;
+            color: #776e65;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #776e65;
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+
+        .scores-container {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .score-box {
+            background: #bbada0;
+            color: white;
+            padding: 15px 25px;
+            border-radius: 3px;
+            font-size: 25px;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .score-label {
+            font-size: 13px;
+            text-transform: uppercase;
+            color: #eee4da;
+        }
+
+        .difficulty-container {
+            background: #bbada0;
+            padding: 20px;
+            border-radius: 3px;
+            margin-bottom: 20px;
+        }
+
+        .difficulty-title {
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .radio-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .radio-option {
+            display: flex;
+            align-items: center;
+            color: white;
+            cursor: pointer;
+        }
+
+        .radio-option input[type="radio"] {
+            margin-right: 10px;
+            cursor: pointer;
+            width: 18px;
+            height: 18px;
+        }
+
+        .custom-inputs {
+            margin-top: 15px;
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .custom-inputs.active {
+            display: flex;
+        }
+
+        .custom-input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .custom-input-group label {
+            color: white;
+            font-size: 14px;
+        }
+
+        .custom-input-group input {
+            padding: 8px;
+            border: none;
+            border-radius: 3px;
+            font-size: 16px;
+        }
+
+        .button-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            flex: 1;
+            background: #8f7a66;
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 3px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .btn:hover {
+            background: #9f8a76;
+        }
+
+        .game-container {
+            background: #bbada0;
+            border-radius: 6px;
+            padding: 15px;
+            position: relative;
+        }
+
+        .grid-container {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 1;
+        }
+
+        .grid-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .grid-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .grid-cell {
+            flex: 1;
+            aspect-ratio: 1;
+            background: rgba(238, 228, 218, 0.35);
+            border-radius: 3px;
+        }
+
+        .tile-container {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            right: 15px;
+            bottom: 15px;
+        }
+
+        .tile {
+            position: absolute;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 55px;
+            font-weight: bold;
+            border-radius: 3px;
+            transition: transform 0.15s ease, opacity 0.15s ease;
+            will-change: transform;
+        }
+
+        .tile-new {
+            animation: appear 0.2s ease;
+        }
+
+        .tile-merged {
+            animation: pop 0.2s ease;
+        }
+
+        @keyframes appear {
+            0% {
+                opacity: 0;
+                transform: scale(0);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        @keyframes pop {
+            0% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.15);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        .tile-2 { background: #eee4da; color: #776e65; }
+        .tile-4 { background: #ede0c8; color: #776e65; }
+        .tile-8 { background: #f2b179; color: #f9f6f2; }
+        .tile-16 { background: #f59563; color: #f9f6f2; }
+        .tile-32 { background: #f67c5f; color: #f9f6f2; }
+        .tile-64 { background: #f65e3b; color: #f9f6f2; }
+        .tile-128 { background: #edcf72; color: #f9f6f2; font-size: 45px; }
+        .tile-256 { background: #edcc61; color: #f9f6f2; font-size: 45px; }
+        .tile-512 { background: #edc850; color: #f9f6f2; font-size: 45px; }
+        .tile-1024 { background: #edc53f; color: #f9f6f2; font-size: 35px; }
+        .tile-2048 { background: #edc22e; color: #f9f6f2; font-size: 35px; }
+        .tile-super { background: #3c3a32; color: #f9f6f2; font-size: 30px; }
+
+        .game-message {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(238, 228, 218, 0.95);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            border-radius: 6px;
+            z-index: 100;
+        }
+
+        .game-message.active {
+            display: flex;
+        }
+
+        .message-text {
+            font-size: 60px;
+            font-weight: bold;
+            color: #776e65;
+            margin-bottom: 20px;
+        }
+
+        .message-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .message-btn {
+            background: #8f7a66;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 3px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .instructions {
+            background: #8f7a66;
+            color: white;
+            padding: 15px;
+            border-radius: 3px;
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .instructions p {
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .instructions p:last-child {
+            margin-bottom: 0;
+        }
+
+        @media (max-width: 520px) {
+            h1 {
+                font-size: 50px;
+            }
+
+            .tile {
+                font-size: 35px;
+            }
+
+            .tile-128, .tile-256, .tile-512 {
+                font-size: 30px;
+            }
+
+            .tile-1024, .tile-2048 {
+                font-size: 25px;
+            }
+
+            .tile-super {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>2048</h1>
+            <div class="subtitle">Challenge Mode</div>
+        </div>
+
+        <div class="scores-container">
+            <div class="score-box">
+                <div class="score-label">Score</div>
+                <div id="score">0</div>
+            </div>
+            <div class="score-box">
+                <div class="score-label">Best</div>
+                <div id="best-score">0</div>
+            </div>
+        </div>
+
+        <div class="difficulty-container">
+            <div class="difficulty-title">Select Difficulty</div>
+            <div class="radio-group">
+                <label class="radio-option">
+                    <input type="radio" name="difficulty" value="classic" checked>
+                    <span>Classic - Standard 2048 game</span>
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="difficulty" value="medium">
+                    <span>Medium - Start with 512 + 5 random tiles</span>
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="difficulty" value="hard">
+                    <span>Hard - Start with 1024 + 8 random tiles</span>
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="difficulty" value="custom">
+                    <span>Custom - Choose your challenge</span>
+                </label>
+            </div>
+            
+            <div class="custom-inputs" id="custom-inputs">
+                <div class="custom-input-group">
+                    <label>Starting Number (power of 2):</label>
+                    <input type="number" id="custom-start" value="512" min="2" step="2">
+                </div>
+                <div class="custom-input-group">
+                    <label>Number of Pre-filled Tiles (0-15):</label>
+                    <input type="number" id="custom-tiles" value="5" min="0" max="15">
+                </div>
+            </div>
+        </div>
+
+        <div class="button-container">
+            <button class="btn" id="new-game-btn">New Game</button>
+        </div>
+
+        <div class="game-container">
+            <div class="grid-container">
+                <div class="grid-row">
+                    <div class="grid-cell"></div>
+                    <div class="grid-cell"></div>
+                    <div class="grid-cell"></div>
+                    <div class="grid-cell"></div>
+                </div>
+                <div class="grid-row">
+                    <div class="grid-cell"></div>
+                    <div class="grid-cell"></div>
+                    <div class="grid-cell"></div>
+                    <div class="grid-cell"></div>
+                </div>
+                <div class="grid-row">
+                    <div class="grid-cell"></div>
+                    <div class="grid-cell"></div>
+                    <div class="grid-cell"></div>
+                    <div class="grid-cell"></div>
+                </div>
+                <div class="grid-row">
+                    <div class="grid-cell"></div>
+                    <div class="grid-cell"></div>
+                    <div class="grid-cell"></div>
+                    <div class="grid-cell"></div>
+                </div>
+            </div>
+            <div class="tile-container" id="tile-container"></div>
+            
+            <div class="game-message" id="game-message">
+                <div class="message-text" id="message-text"></div>
+                <div class="message-buttons">
+                    <button class="message-btn" id="try-again-btn">Try Again</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="instructions">
+            <p><strong>HOW TO PLAY:</strong> Use arrow keys to move tiles.</p>
+            <p>When two tiles with the same number touch, they merge into one!</p>
+            <p><strong>Goal:</strong> Create a 2048 tile to win!</p>
+        </div>
+    </div>
+
+    <script>
+        class Tile {
+            constructor(row, col, value) {
+                this.row = row;
+                this.col = col;
+                this.value = value;
+                this.id = Date.now() + Math.random();
+                this.mergedFrom = null;
+                this.isNew = true;
+            }
+        }
+
+        class Game2048 {
+            constructor() {
+                this.gridSize = 4;
+                this.tiles = [];
+                this.score = 0;
+                this.bestScore = parseInt(localStorage.getItem('bestScore')) || 0;
+                this.won = false;
+                this.gameOver = false;
+                
+                this.tileContainer = document.getElementById('tile-container');
+                this.scoreElement = document.getElementById('score');
+                this.bestScoreElement = document.getElementById('best-score');
+                this.gameMessage = document.getElementById('game-message');
+                this.messageText = document.getElementById('message-text');
+                
+                this.updateBestScore();
+                this.setupEventListeners();
+                this.startNewGame();
+            }
+
+            setupEventListeners() {
+                document.getElementById('new-game-btn').addEventListener('click', () => {
+                    this.startNewGame();
+                });
+
+                document.getElementById('try-again-btn').addEventListener('click', () => {
+                    this.startNewGame();
+                });
+
+                document.addEventListener('keydown', (e) => {
+                    if (this.gameOver && !this.won) return;
+                    
+                    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+                        e.preventDefault();
+                        this.handleMove(e.key);
+                    }
+                });
+
+                document.querySelectorAll('input[name="difficulty"]').forEach(radio => {
+                    radio.addEventListener('change', (e) => {
+                        const customInputs = document.getElementById('custom-inputs');
+                        if (e.target.value === 'custom') {
+                            customInputs.classList.add('active');
+                        } else {
+                            customInputs.classList.remove('active');
+                        }
+                    });
+                });
+            }
+
+            startNewGame() {
+                this.tiles = [];
+                this.score = 0;
+                this.won = false;
+                this.gameOver = false;
+                this.updateScore();
+                this.hideMessage();
+                
+                const difficulty = document.querySelector('input[name="difficulty"]:checked').value;
+                this.initializeGrid(difficulty);
+                this.render();
+            }
+
+            initializeGrid(difficulty) {
+                switch(difficulty) {
+                    case 'classic':
+                        this.addRandomTile();
+                        this.addRandomTile();
+                        break;
+                    
+                    case 'medium':
+                        this.addSpecificTile(512);
+                        this.addRandomTilesUpTo(5, 512);
+                        break;
+                    
+                    case 'hard':
+                        this.addSpecificTile(1024);
+                        this.addRandomTilesUpTo(8, 1024);
+                        break;
+                    
+                    case 'custom':
+                        const startNum = parseInt(document.getElementById('custom-start').value);
+                        const numTiles = parseInt(document.getElementById('custom-tiles').value);
+                        
+                        if (startNum > 0 && (startNum & (startNum - 1)) === 0) {
+                            this.addSpecificTile(startNum);
+                            if (numTiles > 0) {
+                                this.addRandomTilesUpTo(numTiles, startNum);
+                            }
+                        } else {
+                            alert('Starting number must be a power of 2 (2, 4, 8, 16, 32, ...)');
+                            this.addRandomTile();
+                            this.addRandomTile();
+                        }
+                        break;
+                }
+            }
+
+            getEmptyCells() {
+                const cells = [];
+                const occupied = new Set(this.tiles.map(t => `${t.row},${t.col}`));
+                
+                for (let row = 0; row < this.gridSize; row++) {
+                    for (let col = 0; col < this.gridSize; col++) {
+                        if (!occupied.has(`${row},${col}`)) {
+                            cells.push({ row, col });
+                        }
+                    }
+                }
+                return cells;
+            }
+
+            addSpecificTile(value) {
+                const available = this.getEmptyCells();
+                if (available.length > 0) {
+                    const pos = available[Math.floor(Math.random() * available.length)];
+                    const tile = new Tile(pos.row, pos.col, value);
+                    tile.isNew = false;
+                    this.tiles.push(tile);
+                }
+            }
+
+            addRandomTilesUpTo(count, maxValue) {
+                const possibleValues = [];
+                for (let v = 2; v < maxValue; v *= 2) {
+                    possibleValues.push(v);
+                }
+                
+                for (let i = 0; i < count; i++) {
+                    const available = this.getEmptyCells();
+                    if (available.length === 0) break;
+                    
+                    const pos = available[Math.floor(Math.random() * available.length)];
+                    const value = possibleValues[Math.floor(Math.random() * possibleValues.length)];
+                    const tile = new Tile(pos.row, pos.col, value);
+                    tile.isNew = false;
+                    this.tiles.push(tile);
+                }
+            }
+
+            addRandomTile() {
+                const available = this.getEmptyCells();
+                if (available.length > 0) {
+                    const pos = available[Math.floor(Math.random() * available.length)];
+                    const value = Math.random() < 0.9 ? 2 : 4;
+                    const tile = new Tile(pos.row, pos.col, value);
+                    this.tiles.push(tile);
+                }
+            }
+
+            getTileAt(row, col) {
+                return this.tiles.find(t => t.row === row && t.col === col);
+            }
+
+            handleMove(direction) {
+                const vectors = {
+                    'ArrowLeft': { row: 0, col: -1 },
+                    'ArrowRight': { row: 0, col: 1 },
+                    'ArrowUp': { row: -1, col: 0 },
+                    'ArrowDown': { row: 1, col: 0 }
+                };
+
+                const vector = vectors[direction];
+                const traversals = this.buildTraversals(vector);
+                let moved = false;
+
+                this.tiles.forEach(tile => tile.mergedFrom = null);
+
+                traversals.row.forEach(row => {
+                    traversals.col.forEach(col => {
+                        const tile = this.getTileAt(row, col);
+                        if (tile) {
+                            const positions = this.findFarthestPosition(tile, vector);
+                            const next = this.getTileAt(positions.next.row, positions.next.col);
+
+                            if (next && next.value === tile.value && !next.mergedFrom) {
+                                const merged = new Tile(positions.next.row, positions.next.col, tile.value * 2);
+                                merged.mergedFrom = [tile, next];
+                                merged.isNew = false;
+
+                                this.tiles = this.tiles.filter(t => t !== tile && t !== next);
+                                this.tiles.push(merged);
+
+                                this.score += merged.value;
+                                moved = true;
+                            } else {
+                                if (tile.row !== positions.farthest.row || tile.col !== positions.farthest.col) {
+                                    tile.row = positions.farthest.row;
+                                    tile.col = positions.farthest.col;
+                                    moved = true;
+                                }
+                            }
+                        }
+                    });
+                });
+
+                if (moved) {
+                    this.addRandomTile();
+                    this.render();
+
+                    setTimeout(() => {
+                        if (this.checkWin()) {
+                            this.showMessage('You Win!');
+                            this.won = true;
+                        } else if (this.checkGameOver()) {
+                            this.showMessage('Game Over!');
+                            this.gameOver = true;
+                        }
+                    }, 200);
+                }
+            }
+
+            buildTraversals(vector) {
+                const traversals = { row: [], col: [] };
+
+                for (let pos = 0; pos < this.gridSize; pos++) {
+                    traversals.row.push(pos);
+                    traversals.col.push(pos);
+                }
+
+                if (vector.row === 1) traversals.row = traversals.row.reverse();
+                if (vector.col === 1) traversals.col = traversals.col.reverse();
+
+                return traversals;
+            }
+
+            findFarthestPosition(tile, vector) {
+                let previous;
+                let cell = { row: tile.row, col: tile.col };
+
+                do {
+                    previous = cell;
+                    cell = { row: previous.row + vector.row, col: previous.col + vector.col };
+                } while (this.withinBounds(cell) && !this.getTileAt(cell.row, cell.col));
+
+                return {
+                    farthest: previous,
+                    next: cell
+                };
+            }
+
+            withinBounds(position) {
+                return position.row >= 0 && position.row < this.gridSize &&
+                       position.col >= 0 && position.col < this.gridSize;
+            }
+
+            checkWin() {
+                return this.tiles.some(tile => tile.value === 2048);
+            }
+
+            checkGameOver() {
+                if (this.getEmptyCells().length > 0) {
+                    return false;
+                }
+
+                for (let tile of this.tiles) {
+                    const directions = [
+                        { row: 0, col: 1 },
+                        { row: 1, col: 0 }
+                    ];
+
+                    for (let dir of directions) {
+                        const neighbor = this.getTileAt(tile.row + dir.row, tile.col + dir.col);
+                        if (neighbor && neighbor.value === tile.value) {
+                            return false;
+                        }
+                    }
+                }
+
+                return true;
+            }
+
+            render() {
+                const containerWidth = this.tileContainer.offsetWidth;
+                const tileSize = (containerWidth - (15 * 3)) / 4;
+
+                const existingTiles = {};
+                Array.from(this.tileContainer.children).forEach(el => {
+                    existingTiles[el.dataset.id] = el;
+                });
+
+                this.tiles.forEach(tile => {
+                    let tileElement = existingTiles[tile.id];
+                    
+                    if (!tileElement) {
+                        tileElement = document.createElement('div');
+                        tileElement.dataset.id = tile.id;
+                        this.tileContainer.appendChild(tileElement);
+                    }
+
+                    const classes = ['tile', `tile-${tile.value > 2048 ? 'super' : tile.value}`];
+                    if (tile.isNew) {
+                        classes.push('tile-new');
+                        tile.isNew = false;
+                    }
+                    if (tile.mergedFrom) {
+                        classes.push('tile-merged');
+                    }
+
+                    tileElement.className = classes.join(' ');
+                    tileElement.textContent = tile.value;
+                    tileElement.style.width = `${tileSize}px`;
+                    tileElement.style.height = `${tileSize}px`;
+                    
+                    const left = tile.col * (tileSize + 15);
+                    const top = tile.row * (tileSize + 15);
+                    tileElement.style.transform = `translate(${left}px, ${top}px)`;
+
+                    delete existingTiles[tile.id];
+                });
+
+                Object.values(existingTiles).forEach(el => el.remove());
+
+                this.updateScore();
+            }
+
+            updateScore() {
+                this.scoreElement.textContent = this.score;
+                if (this.score > this.bestScore) {
+                    this.bestScore = this.score;
+                    localStorage.setItem('bestScore', this.bestScore);
+                    this.updateBestScore();
+                }
+            }
+
+            updateBestScore() {
+                this.bestScoreElement.textContent = this.bestScore;
+            }
+
+            showMessage(text) {
+                this.messageText.textContent = text;
+                this.gameMessage.classList.add('active');
+            }
+
+            hideMessage() {
+                this.gameMessage.classList.remove('active');
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            new Game2048();
+        });
+    </script>
+</body>
+</html>
