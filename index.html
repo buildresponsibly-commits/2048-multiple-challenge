@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -198,7 +199,7 @@
             font-size: 55px;
             font-weight: bold;
             border-radius: 3px;
-            transition: transform 0.15s ease, opacity 0.15s ease;
+            transition: transform 0.15s ease;
             will-change: transform;
         }
 
@@ -286,6 +287,10 @@
             font-size: 18px;
             font-weight: bold;
             cursor: pointer;
+        }
+
+        .message-btn:hover {
+            background: #9f8a76;
         }
 
         .instructions {
@@ -415,8 +420,9 @@
             
             <div class="game-message" id="game-message">
                 <div class="message-text" id="message-text"></div>
-                <div class="message-buttons">
-                    <button class="message-btn" id="try-again-btn">Try Again</button>
+                <div class="message-buttons" id="message-buttons">
+                    <button class="message-btn" id="new-game-msg-btn">New Game</button>
+                    <button class="message-btn" id="continue-btn" style="display: none;">Continue</button>
                 </div>
             </div>
         </div>
@@ -447,6 +453,7 @@
                 this.score = 0;
                 this.bestScore = parseInt(localStorage.getItem('bestScore')) || 0;
                 this.won = false;
+                this.wonDisplayed = false; // Track if we've shown the win message
                 this.gameOver = false;
                 
                 this.tileContainer = document.getElementById('tile-container');
@@ -454,6 +461,8 @@
                 this.bestScoreElement = document.getElementById('best-score');
                 this.gameMessage = document.getElementById('game-message');
                 this.messageText = document.getElementById('message-text');
+                this.continueBtn = document.getElementById('continue-btn');
+                this.newGameMsgBtn = document.getElementById('new-game-msg-btn');
                 
                 this.updateBestScore();
                 this.setupEventListeners();
@@ -465,12 +474,16 @@
                     this.startNewGame();
                 });
 
-                document.getElementById('try-again-btn').addEventListener('click', () => {
+                this.newGameMsgBtn.addEventListener('click', () => {
                     this.startNewGame();
                 });
 
+                this.continueBtn.addEventListener('click', () => {
+                    this.continueGame();
+                });
+
                 document.addEventListener('keydown', (e) => {
-                    if (this.gameOver && !this.won) return;
+                    if (this.gameOver) return;
                     
                     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
                         e.preventDefault();
@@ -494,6 +507,7 @@
                 this.tiles = [];
                 this.score = 0;
                 this.won = false;
+                this.wonDisplayed = false;
                 this.gameOver = false;
                 this.updateScore();
                 this.hideMessage();
@@ -501,6 +515,11 @@
                 const difficulty = document.querySelector('input[name="difficulty"]:checked').value;
                 this.initializeGrid(difficulty);
                 this.render();
+            }
+
+            continueGame() {
+                this.hideMessage();
+                // Game continues - won stays true but wonDisplayed prevents showing message again
             }
 
             initializeGrid(difficulty) {
@@ -584,6 +603,7 @@
                 const available = this.getEmptyCells();
                 if (available.length > 0) {
                     const pos = available[Math.floor(Math.random() * available.length)];
+                    // Only spawn 2 or 4 (90% chance of 2, 10% chance of 4)
                     const value = Math.random() < 0.9 ? 2 : 4;
                     const tile = new Tile(pos.row, pos.col, value);
                     this.tiles.push(tile);
@@ -641,11 +661,13 @@
                     this.render();
 
                     setTimeout(() => {
-                        if (this.checkWin()) {
-                            this.showMessage('You Win!');
+                        // Check win only if we haven't shown the win message yet
+                        if (!this.wonDisplayed && this.checkWin()) {
+                            this.showWinMessage();
                             this.won = true;
+                            this.wonDisplayed = true;
                         } else if (this.checkGameOver()) {
-                            this.showMessage('Game Over!');
+                            this.showGameOverMessage();
                             this.gameOver = true;
                         }
                     }, 200);
@@ -723,6 +745,7 @@
 
                 this.tiles.forEach(tile => {
                     let tileElement = existingTiles[tile.id];
+                    const isNewElement = !tileElement;
                     
                     if (!tileElement) {
                         tileElement = document.createElement('div');
@@ -731,6 +754,8 @@
                     }
 
                     const classes = ['tile', `tile-${tile.value > 2048 ? 'super' : tile.value}`];
+                    
+                    // Only add animation for truly new tiles (just spawned)
                     if (tile.isNew) {
                         classes.push('tile-new');
                         tile.isNew = false;
@@ -746,7 +771,20 @@
                     
                     const left = tile.col * (tileSize + 15);
                     const top = tile.row * (tileSize + 15);
-                    tileElement.style.transform = `translate(${left}px, ${top}px)`;
+                    
+                    // For brand new elements, position immediately without transition
+                    if (isNewElement) {
+                        tileElement.style.transition = 'none';
+                        tileElement.style.transform = `translate(${left}px, ${top}px)`;
+                        
+                        // Force a reflow to apply the non-transition state
+                        tileElement.offsetHeight;
+                        
+                        // Re-enable transitions for future moves
+                        tileElement.style.transition = '';
+                    } else {
+                        tileElement.style.transform = `translate(${left}px, ${top}px)`;
+                    }
 
                     delete existingTiles[tile.id];
                 });
@@ -769,8 +807,17 @@
                 this.bestScoreElement.textContent = this.bestScore;
             }
 
-            showMessage(text) {
-                this.messageText.textContent = text;
+            showWinMessage() {
+                this.messageText.textContent = 'You Win!';
+                this.continueBtn.style.display = 'inline-block';
+                this.newGameMsgBtn.textContent = 'New Game';
+                this.gameMessage.classList.add('active');
+            }
+
+            showGameOverMessage() {
+                this.messageText.textContent = 'Game Over!';
+                this.continueBtn.style.display = 'none';
+                this.newGameMsgBtn.textContent = 'Try Again';
                 this.gameMessage.classList.add('active');
             }
 
