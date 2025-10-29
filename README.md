@@ -2,6 +2,7 @@
 
 **How It Works:**
 
+* Click to go to game: https://buildresponsibly-commits.github.io/2048-multiple-challenge/ 
 * Select a difficulty level using the radio buttons
 * Click "New Game" to start with the selected difficulty
 * Use arrow keys (↑ ↓ ← →) to move tiles
